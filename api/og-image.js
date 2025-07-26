@@ -1,7 +1,4 @@
-const puppeteer = require('puppeteer-core');
-const chrome = require('chrome-aws-lambda');
-
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   try {
     const {
       title = 'تجربة من كتاب النور',
@@ -10,35 +7,17 @@ module.exports = async (req, res) => {
       content = 'تجربة حقيقية من الحياة'
     } = req.query;
 
+    // For now, let's return a simple response to test
     const html = generateHTML(title, voice, date, content);
     
-    const browser = await puppeteer.launch({
-      args: chrome.args,
-      defaultViewport: chrome.defaultViewport,
-      executablePath: await chrome.executablePath,
-      headless: chrome.headless,
-    });
-    
-    const page = await browser.newPage();
-    await page.setViewport({ width: 1200, height: 630 });
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-    
-    const screenshot = await page.screenshot({
-      type: 'png',
-      fullPage: false
-    });
-    
-    await browser.close();
-    
-    res.setHeader('Content-Type', 'image/png');
-    res.setHeader('Cache-Control', 'public, max-age=86400');
-    res.send(screenshot);
+    res.setHeader('Content-Type', 'text/html');
+    res.send(html);
     
   } catch (error) {
-    console.error('Error generating OG image:', error);
-    res.status(500).json({ error: 'Failed to generate image' });
+    console.error('Error:', error);
+    res.status(500).json({ error: error.message });
   }
-};
+}
 
 function generateHTML(title, voice, date, content) {
   const contentPreview = content.substring(0, 120) + '...';
