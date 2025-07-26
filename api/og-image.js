@@ -1,4 +1,7 @@
-export default async function handler(req, res) {
+const puppeteer = require('puppeteer-core');
+const chromium = require('@sparticuz/chromium');
+
+module.exports = async (req, res) => {
   try {
     const {
       title = 'تجربة من كتاب النور',
@@ -7,17 +10,36 @@ export default async function handler(req, res) {
       content = 'تجربة حقيقية من الحياة'
     } = req.query;
 
-    // For now, let's return a simple response to test
     const html = generateHTML(title, voice, date, content);
     
-    res.setHeader('Content-Type', 'text/html');
-    res.send(html);
+    // Launch browser
+    const browser = await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: await chromium.executablePath(),
+      headless: chromium.headless,
+    });
+
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1200, height: 630 });
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+    
+    const screenshot = await page.screenshot({
+      type: 'png',
+      fullPage: false,
+    });
+
+    await browser.close();
+
+    res.setHeader('Content-Type', 'image/png');
+    res.setHeader('Cache-Control', 'public, immutable, no-transform, s-maxage=31536000, max-age=31536000');
+    res.send(screenshot);
     
   } catch (error) {
     console.error('Error:', error);
     res.status(500).json({ error: error.message });
   }
-}
+};
 
 function generateHTML(title, voice, date, content) {
   const contentPreview = content.substring(0, 120) + '...';
